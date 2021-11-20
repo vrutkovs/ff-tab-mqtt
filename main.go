@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -14,15 +15,20 @@ var meetingUrls = []string{
 }
 
 func main() {
-	_, ok := os.LookupEnv("MQTT_HOST")
+	// Read env vars
+	mqttHost, ok := os.LookupEnv("MQTT_HOST")
 	if !ok {
 		panic("MQTT_HOST unset")
 	}
-	_, ok = os.LookupEnv("MQTT_USER")
+	mqttPort, ok := os.LookupEnv("MQTT_PORT")
+	if !ok {
+		panic("MQTT_PORT unset")
+	}
+	mqttUsername, ok := os.LookupEnv("MQTT_USER")
 	if !ok {
 		panic("MQTT_USER unset")
 	}
-	_, ok = os.LookupEnv("MQTT_PASSWORD")
+	mqttPassword, ok := os.LookupEnv("MQTT_PASSWORD")
 	if !ok {
 		panic("MQTT_PASSWORD unset")
 	}
@@ -31,8 +37,10 @@ func main() {
 		panic("FF_PROFILE unset")
 	}
 
-	mqtt := Mqtt{
-		State: false,
+	// Make an mqtt client
+	mqtt := NewMqtt(mqttHost, mqttPort, mqttUsername, mqttPassword)
+	if token := mqtt.client.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
 	}
 
 	// Check for meeting every 5 seconds
@@ -49,6 +57,7 @@ func main() {
 	}()
 
 	// Every time ticker sends a channel message run actions
+	fmt.Printf("Started main loop")
 	for {
 		select {
 		case <-ticker.C:
@@ -57,6 +66,7 @@ func main() {
 				mqtt.setState(meetingFound)
 			}
 		case <-quit:
+			mqtt.client.Disconnect(250)
 			ticker.Stop()
 			return
 		}
@@ -71,7 +81,7 @@ func meetingSensor(profileDir string) bool {
 	found := false
 	for m := range meetingUrls {
 		for i := range urls {
-			if urls[i] == meetingUrls[m] {
+			if strings.HasPrefix(urls[i], meetingUrls[m]) {
 				found = true
 				break
 			}
