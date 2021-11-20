@@ -49,20 +49,18 @@ func main() {
 	}()
 
 	// Every time ticker sends a channel message run actions
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				meetingFound := meetingSensor(profileDir)
-				if mqtt.State != meetingFound {
-					mqtt.setState(meetingFound)
-				}
-			case <-quit:
-				ticker.Stop()
-				return
+	for {
+		select {
+		case <-ticker.C:
+			meetingFound := meetingSensor(profileDir)
+			if mqtt.State != meetingFound {
+				mqtt.setState(meetingFound)
 			}
+		case <-quit:
+			ticker.Stop()
+			return
 		}
-	}()
+	}
 }
 
 func meetingSensor(profileDir string) bool {
