@@ -2,35 +2,28 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"os"
 	"path"
 
-	"github.com/pierrec/lz4"
+	"github.com/frioux/leatherman/pkg/mozlz4"
 )
 
 const SESSIONBACKUPPATH = "sessionstore-backups/recovery.jsonlz4"
 
-func readMozillaRecoveryBackup(filename string) ([]byte, error) {
+func readMozillaRecoveryBackup(filename string) (*io.Reader, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
-	size := make([]byte, 4)
-	file.Read(size)
-
-	src, err := ioutil.ReadAll(file)
+	r, err := mozlz4.NewReader(file)
 	if err != nil {
-		return nil, err
+		fmt.Fprintf(os.Stderr, "Couldn't create reader: %s\n", err)
+		os.Exit(1)
 	}
-
-	out := make([]byte, len(src)*10) // XXX should make this use size
-	_, err = lz4.UncompressBlock(src, out)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
+	return &r, nil
 }
 
 type MRBEntry struct {
@@ -57,7 +50,7 @@ func collectUrls(profileDir string) ([]string, error) {
 		return nil, err
 	}
 	var mrb MozillaRecoveryBackup
-	err = json.Unmarshal(recoveryBackupContents, &mrb)
+	err = json.NewDecoder(*recoveryBackupContents).Decode(&mrb)
 	if err != nil {
 		return nil, err
 	}
