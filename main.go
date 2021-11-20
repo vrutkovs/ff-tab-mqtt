@@ -38,6 +38,7 @@ func main() {
 	}
 
 	// Make an mqtt client
+	fmt.Printf("Connecting to tcp://%s:%s as %s", mqttHost, mqttPort, mqttUsername)
 	mqtt := NewMqtt(mqttHost, mqttPort, mqttUsername, mqttPassword)
 	if token := mqtt.client.Connect(); token.Wait() && token.Error() != nil {
 		panic(token.Error())
@@ -57,7 +58,7 @@ func main() {
 	}()
 
 	// Every time ticker sends a channel message run actions
-	fmt.Printf("Started main loop")
+	fmt.Printf("Watching Firefox profile dir at %s", profileDir)
 	for {
 		select {
 		case <-ticker.C:
