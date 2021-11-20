@@ -37,7 +37,12 @@ type State struct {
 }
 
 func (m *Mqtt) setState(newState bool) {
-	fmt.Printf("Changing state to %v", newState)
+	if newState {
+		fmt.Printf("Meeting detected")
+	} else {
+		fmt.Printf("Meeting finished")
+	}
+
 	m.State = newState
 	token := m.client.Publish(TOPIC, 0, true, BoolToMQTT[m.State])
 	token.Wait()
